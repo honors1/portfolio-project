@@ -1,4 +1,4 @@
-"""Pydantic schemas"""
+"""Pydantic 스키마"""
 from pydantic import BaseModel, ConfigDict
 from typing import List
 from datetime import date
@@ -24,7 +24,6 @@ class Player(PlayerBase):
     model_config = ConfigDict(from_attributes = True)
     performances: List[Performance] = []
 
-
 class TeamBase(BaseModel):
     model_config = ConfigDict(from_attributes = True)
     league_id : int
@@ -35,7 +34,6 @@ class TeamBase(BaseModel):
 class Team(TeamBase):
     model_config = ConfigDict(from_attributes = True)
     players: List[PlayerBase] = []
-
 
 class League(BaseModel):
     model_config = ConfigDict(from_attributes = True)
