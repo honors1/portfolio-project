@@ -7,19 +7,19 @@ import logging
 logger = logging.getLogger(__name__)
 
 class SWCClient:
-    """Interacts with the Sports World Central API.
+    """SportsWorldCentral API와 상호 작용하는 클라이언트 클래스
 
-        This SDK class simplifies the process of using the SWC fantasy
-        football API. It supports all the functions of SWC API and returns
-        validated datatypes.
+    이 SDK 클래스는 SWC 판타지 풋볼 API를 보다 쉽게 사용할 수 있도록 설계됐다.
+    모든 API 기능을 지원하며, 데이터 검증이 완료된 타입을 반환한다.
 
-    Typical usage example:
+    사용 예시:
 
         client = SWCClient()
         response = client.get_health_check()
 
     """
 
+    # 주요 API 엔드포인트 정의
     HEALTH_CHECK_ENDPOINT = "/"
     LIST_LEAGUES_ENDPOINT = "/v0/leagues/"
     LIST_PLAYERS_ENDPOINT = "/v0/players/"
@@ -35,17 +35,18 @@ class SWCClient:
 
 
     def __init__(self, input_config: config.SWCConfig):
-        """Class constructor that sets varibles from configuration object."""
+        """설정 객체를 통해 클라이언트 내부 속성을 초기화한다."""
 
-        logger.debug(f"Bulk file base URL: {self.BULK_FILE_BASE_URL}")
+        logger.debug(f"벌크 파일 베이스 URL: {self.BULK_FILE_BASE_URL}")
 
-        logger.debug(f"Input config: {input_config}")
+        logger.debug(f"입력 구성: {input_config}")
 
         self.swc_base_url = input_config.swc_base_url
         self.backoff = input_config.swc_backoff
         self.backoff_max_time = input_config.swc_backoff_max_time
         self.bulk_file_format = input_config.swc_bulk_file_format
 
+        # 대용량 데이터 파일 이름 사전 초기화
         self.BULK_FILE_NAMES = {
             "players": "player_data",
             "leagues": "league_data",
@@ -62,6 +63,7 @@ class SWCClient:
                 jitter=backoff.random_jitter,
             )(self.call_api)
 
+        # 파일 형식에 따라 확장자 자동 부여
         if self.bulk_file_format.lower() == "parquet":
             self.BULK_FILE_NAMES = {
                 key: value + ".parquet" for key, value in self.BULK_FILE_NAMES.items()
@@ -71,14 +73,15 @@ class SWCClient:
                 key: value + ".csv" for key, value in self.BULK_FILE_NAMES.items()
             }
 
-        logger.debug(f"Bulk file dictionary: {self.BULK_FILE_NAMES}")
+        logger.debug(f"벌크 파일 딕셔너리: {self.BULK_FILE_NAMES}")
 
     def call_api(self,
                 api_endpoint: str,
                 api_params: dict = None
             ) -> httpx.Response:
-            """Makes API call and logs errors."""
+            """API를 호출하고 오류를 로깅한다."""
 
+            # None 값을 제거해 유효한 매개 변수만 요청에 포함
             if api_params:
                 api_params = {key: val for key, val in api_params.items() if val is not None}
 
@@ -88,28 +91,35 @@ class SWCClient:
                     response = client.get(api_endpoint, params=api_params)
                     logger.debug(f"Response JSON: {response.json()}")
                     return response
+                
+            # HTTP 상태 코드 기반 예외 처리
             except httpx.HTTPStatusError as e:
                 logger.error(
-                    f"HTTP status error occurred: {e.response.status_code} {e.response.text}"
+                    f"HTTP 상태 오류 발생: {e.response.status_code} {e.response.text}"
                 )
                 raise
+
+            # 기타 요청 관련 예외 처리
             except httpx.RequestError as e:
-                logger.error(f"Request error occurred: {str(e)}")
+                logger.error(f"요청 중 오류 발생: {str(e)}")
                 raise
 
     def get_health_check(self) -> httpx.Response:
-        """Checks if API is running and healthy.
+        """
+        API가 정상적으로 동작하는지 상태를 확인한다.
 
-        Calls the API health check endpoint and returns a standard
-        message if the API is running normally. Can be used to check
-        status of API before making more complicated API calls.
+        API의 상태 확인 엔드포인트를 호출해,
+        API가 정상적으로 실행 중일 경우 표준 응답 메시지를 반환한다.
 
-        Returns:
-            An httpx.Response object that contains the HTTP status,
-            JSON response and other information received from the API.
+        복잡한 API 호출을 수행하기 전에
+        API의 상태를 점검하는 용도로 사용할 수 있다.
+
+        반환값:
+        - httpx.Response 객체: http 상태 코드, JSON 응답, 그 외 API로부터
+                               받은 정보를 포함한다.
 
         """
-        logger.debug("Entered health check")
+        logger.debug("상태 확인 진입")
         endpoint_url = self.HEALTH_CHECK_ENDPOINT
         return self.call_api(endpoint_url)
 
@@ -120,17 +130,17 @@ class SWCClient:
         minimum_last_changed_date: str = None,
         league_name: str = None,
     ) -> List[League]:
-        """Returns a List of Leagues filtered by parameters.
-
-        Calls the API v0/leagues endpoint and returns a list of
-        League objects.
-
-        Returns:
-        A List of schemas.League objects. Each represents one
-        SportsWorldCentral fantasy league.
-
         """
-        logger.debug("Entered list leagues")
+        리그 정보를 조건에 따라 필터링해 반환한다.
+
+        /v0/leagues 엔드포인트를 호출하고,
+        반환된 JSON 데이터를 League 객체로 변환해 리스트로 반환한다.
+
+        반환값:
+        - schemas.League 객체의 리스트: 각 객체는 하나의 SportsWorldCentral
+                                        판타지 리그를 나타낸다.
+        """
+        logger.debug("리그 정보 조회 진입")
 
         params = { 
             "skip": skip,
@@ -144,15 +154,15 @@ class SWCClient:
     
         
     def get_league_by_id(self, league_id: int) -> League:
-        """Returns a Leagues matching a league_id.
+        """league_id와 일치하는 리그를 반환한다.
 
-        Calls the API v0/leagues/{league_id} endpoint and returns single League.
+        v0/leagues/{league_id} 엔드포인트를 호출하고 리그 정보를 반환한다.
 
-        Returns:
-        A schemas.League objects representing one SportsWorldCentral fantasy league.
+        반환값:
+        - schemas.League 객체: 각 객체는 SportsWorldCentral 판타지 리그를 나타낸다. 
 
         """
-        logger.debug("Entered get league by ID")
+        logger.debug("리그 ID 정보 조회 진입")
         # build URL
         endpoint_url = f"{self.LIST_LEAGUES_ENDPOINT}{league_id}"
         # make the API call
@@ -162,15 +172,15 @@ class SWCClient:
 
 
     def get_counts(self) -> Counts:
-        """Returns Counts of several endpoints.
+        """여러 엔드포인트의 개수를 반환한다.
 
-        Calls the API v0/counts endpoint and returns a Counts object.
+        v0/counts 엔드포인트를 호출하고 Counts 객체를 반환한다.
 
-        Returns:
-        Counts object representing counts of elements in the API.,
+        반환값:
+        - Counts 객체: 각 객체는 API 내 요소들의 개수를 나타낸다.
 
         """
-        logger.debug("Entered get counts")
+        logger.debug("개수 정보 조회 진입")
 
         response = self.call_api(self.GET_COUNTS_ENDPOINT)
         responseCounts = Counts(**response.json())
@@ -184,18 +194,16 @@ class SWCClient:
         team_name: str = None,
         league_id: int = None,
     ):
-        """Returns a List of Teams filtered by parameters.
+        """매개변수로 필터링된 팀 목록을 반환한다.
 
-        Calls the API v0/teams endpoint and returns a list of
-        Team objects.
+        v0/teams 엔드포인트를 호출하고 팀 목록 객체를 반환한다.
 
-        Returns:
-        A List of schemas.Team objects. Each represents one
-        team in a SportsWorldCentral fantasy league.
+        반환값:
+        - schemas.Team 목록 객체: 각 객체는 SportsWorldCentral 판타지 리그의 팀 목록을 나타낸다.
 
-        """
+                """
 
-        logger.debug("Entered list teams")
+        logger.debug("팀 목록 정보 조회 진입")
 
         params = {
             "skip": skip,
@@ -215,17 +223,15 @@ class SWCClient:
         first_name: str = None,
         last_name: str = None,
     ):
-        """Returns a List of Players filtered by parameters.
+        """매개변수로 필터링된 선수 목록을 반환한다.
 
-        Calls the API v0/players endpoint and returns a list of
-        Player objects.
+        v0/players 엔드포인트를 호출하고 선수 목록 객체를 반환한다.
 
-        Returns:
-        A List of schemas.Player objects. Each represents one
-        NFL player.
+        반환값:
+        - schemas.Player 목록 객체: 각 객체는 NFL 선수 목록을 나타낸다.
 
         """
-        logger.debug("Entered list players")
+        logger.debug("선수 목록 정보 조회 진입")
 
         params = {
             "skip": skip,
@@ -239,21 +245,19 @@ class SWCClient:
         return [Player(**player) for player in response.json()]
 
     def get_player_by_id(self, player_id: int):
-        """Returns a Players matching the SWC Player ID.
+        """SWC 선수 ID와 일치하는 선수를 반환한다.
 
-        Calls the API v0/players/{player_id} endpoint and returns
-        one Player pboject.
+        v0/players/{player_id} 엔드포인트를 호출하고 선수 객체를 반환한다.
 
-        Returns:
-        A List of schemas.Player object representing an
-        NFL player.
+        반환값:
+        - schemas.Player 객체: 각 객체는 NFL 선수를 나타낸다. 
 
         """
-        logger.debug("Entered get player by ID")
+        logger.debug("선수 ID 정보 조회 진입")
 
-        # build URL
+        # URL 빌드
         endpoint_url = f"{self.LIST_PLAYERS_ENDPOINT}{player_id}"
-        # make the API call
+        # API 호출 하기
         response = self.call_api(endpoint_url)
         responsePlayer = Player(**response.json())
         return responsePlayer
@@ -261,17 +265,15 @@ class SWCClient:
     def list_performances(
         self, skip: int = 0, limit: int = 100, minimum_last_changed_date: str = None
     ):
-        """Returns a List of Performances filtered by parameters.
+        """매개변수로 필터링된 성적 목록을 반환한다.
 
-        Calls the API v0/performances endpoint and returns a list of
-        Performance objects.
+        v0/performances 엔드포인트를 호출하고 성적 목록 객체를 반환한다.
 
-        Returns:
-        A List of schemas.Performance objects. Each represents one
-        player's scoring for one NFL week.
+        반환값:
+        - schemas.Performance 객체: 각 객체는 각 선수의 NFL 주간 점수를 나타낸다.
 
         """
-        logger.debug("Entered get performances")
+        logger.debug("성적 정보 조회 진입")
 
         params = {
             "skip": skip,
@@ -282,38 +284,38 @@ class SWCClient:
         response = self.call_api(self.LIST_PERFORMANCES_ENDPOINT, params)
         return [Performance(**peformance) for peformance in response.json()]
 
-#bulk endpoints
+#벌크 엔드포인트
 
     def get_bulk_player_file(self) -> bytes:
-        """Returns a bulk file with player data"""
+        """선수 데이터가 포함된 벌크 파일을 반환한다."""
 
-        logger.debug("Entered get bulk player file")
+        logger.debug("선수 벌크 파일 가져오기 진입")
 
         player_file_path = self.BULK_FILE_BASE_URL + self.BULK_FILE_NAMES["players"]
 
         response = httpx.get(player_file_path, follow_redirects=True)
 
         if response.status_code == 200:
-            logger.debug("File downloaded successfully")
+            logger.debug("파일 다운로드 성공")
             return response.content
 
     def get_bulk_league_file(self) -> bytes:
-        """Returns a CSV file with league data"""
+        """리그 데이터가 포함된 CSV 파일을 반환한다."""
 
-        logger.debug("Entered get bulk league file")
+        logger.debug("리그 벌크 파일 가져오기 진입")
 
         league_file_path = self.BULK_FILE_BASE_URL + self.BULK_FILE_NAMES["leagues"]
 
         response = httpx.get(league_file_path, follow_redirects=True)
 
         if response.status_code == 200:
-            logger.debug("File downloaded successfully")
+            logger.debug("파일 다운로드 성공")
             return response.content
 
     def get_bulk_performance_file(self) -> bytes:
-        """Returns a CSV file with performance data"""
+        """성적 데이터가 포함된 CSV 파일을 반환한다."""
 
-        logger.debug("Entered get bulk performance file")
+        logger.debug("성적 벌크 파일 가져오기 진입")
 
         performance_file_path = (
             self.BULK_FILE_BASE_URL + self.BULK_FILE_NAMES["performances"]
@@ -322,26 +324,26 @@ class SWCClient:
         response = httpx.get(performance_file_path, follow_redirects=True)
 
         if response.status_code == 200:
-            logger.debug("File downloaded successfully")
+            logger.debug("파일 다운로드 성공")
             return response.content
 
     def get_bulk_team_file(self) -> bytes:
-        """Returns a CSV file with team data"""
+        """팀 데이터가 포함된 CSV 파일을 반환한다."""
 
-        logger.debug("Entered get bulk team file")
+        logger.debug("팀 벌크 파일 가져오기 진입")
 
         team_file_path = self.BULK_FILE_BASE_URL + self.BULK_FILE_NAMES["teams"]
 
         response = httpx.get(team_file_path, follow_redirects=True)
 
         if response.status_code == 200:
-            logger.debug("File downloaded successfully")
+            logger.debug("파일 다운로드 성공")
             return response.content
 
     def get_bulk_team_player_file(self) -> bytes:
-        """Returns a CSV file with team player data"""
+        """팀 선수 데이터가 포함된 CSV 파일을 반환한다."""
 
-        logger.debug("Entered get bulk team player file")
+        logger.debug("팀 선수 벌크 파일 가져오기 진입")
 
         team_player_file_path = (
             self.BULK_FILE_BASE_URL + self.BULK_FILE_NAMES["team_players"]
@@ -350,5 +352,5 @@ class SWCClient:
         response = httpx.get(team_player_file_path, follow_redirects=True)
 
         if response.status_code == 200:
-            logger.debug("File downloaded successfully")
+            logger.debug("파일 다운로드 성공")
             return response.content
