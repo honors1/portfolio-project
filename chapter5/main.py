@@ -24,7 +24,7 @@ NFL 선수의 경기 성적과 해당 성적을 기반으로 한 SWC 리그 판�
 SWC 판타지 풋볼 리그 전체와 각 리그에 속한 팀에 대한 정보를 제공합니다.
 """
 
-# OpenAPI 명세에 추가 세부 정보가 추가된 FastAPI 생성자
+# OpenAPI 명세에 추가 세부 정보를 포함한 FastAPI 앱 생성자
 app = FastAPI(
     description=api_description,
     title="Sports World Central(SWC) 판타지 풋볼 API",
@@ -54,6 +54,7 @@ async def root():
 
 @app.get(
     "/v0/players/",
+    summary="요청 매개변수에 해당하는 모든 SWC 선수 정보를 가져옵니다.",
     response_model=list[schemas.Player],
     description="""이 엔드포인트를 사용해 SWC 선수 목록을 조회합니다. 매개변수를 이용해 목록을 필터링할 수 있습니다. 이름은 고유하지 않습니다. skip과 limit을 사용해 API 페이징을 수행합니다. 선수 수를 셀 때는 Player ID 값을 사용하지 않습니다. ID는 순차적으로 보장되지 않습니다.""",
     response_description="SWC 판타지 풋볼에 등록된 NFL 선수 목록입니다. 팀에 속해 있지 않아도 선수 목록을 제공합니다.",
@@ -69,7 +70,7 @@ def read_players(
     ),
     minimum_last_changed_date: date = Query(
         None,
-        description="반환할 레코드의 최소 변경 날짜입니다. 이 날짜 이전에 변경된 레코드는 제외합니다.",
+        description="변경 기준 날짜입니다. 이 날짜 이후에 변경된 레코드만 반환합니다.",
     ),
     first_name: str = Query(
         None, description="반환할 선수의 이름입니다."
@@ -122,7 +123,7 @@ def read_performances(
     ),
     minimum_last_changed_date: date = Query(
         None,
-        description="반환할 레코드의 최소 변경 날짜입니다. 이 날짜 이전에 변경된 레코드는 제외합니다.",
+        description="변경 기준 날짜입니다. 이 날짜 이후에 변경된 레코드만 반환합니다.",
     ),
     db: Session = Depends(get_db),
 ):
@@ -136,8 +137,8 @@ def read_performances(
     "/v0/leagues/{league_id}",
     response_model=schemas.League,
     summary="리그 ID에 해당하는 리그 정보를 가져옵니다.",
-    description="""이 엔드포인트를 사용해 제공된 league_id에 해당하는 리그 정보를 조회합니다.""",
-    response_description="SWC 리그 하나입니다.",
+    description="""이 엔드포인트를 사용해 제공된 league_id와 일치하는 리그 정보를 조회합니다.""",
+    response_description="1개의 SWC 리그입니다.",
     operation_id="v0_get_league_by_league_id",
     tags=["membership"],
 )
@@ -166,7 +167,7 @@ def read_leagues(
     ),
     minimum_last_changed_date: date = Query(
         None,
-        description="반환할 레코드의 최소 변경 날짜입니다. 이 날짜 이전에 변경된 레코드는 제외합니다.",
+        description="변경 기준 날짜입니다. 이 날짜 이후에 변경된 레코드만 반환합니다.",
     ),
     league_name: str = Query(
         None, description="반환할 리그 이름입니다. SWC에서 고유하지 않습니다."
@@ -201,7 +202,7 @@ def read_teams(
     ),
     minimum_last_changed_date: date = Query(
         None,
-        description="반환할 레코드의 최소 변경 날짜입니다. 이 날짜 이전에 변경된 레코드는 제외합니다.",
+        description="변경 기준 날짜입니다. 이 날짜 이후에 변경된 레코드만 반환합니다.",
     ),
     team_name: str = Query(
         None,
@@ -227,7 +228,7 @@ def read_teams(
     "/v0/counts/",
     response_model=schemas.Counts,
     summary="SWC 판타지 풋볼의 리그, 팀, 선수 수를 가져옵니다.",
-    description="""이 엔드포인트를 사용해 SWC 판타지 풋볼의 리그, 팀, 선수 수를 확인합니다. 다른 조회 엔드포인트의 skip과 limit과 함께 사용합니다. 개수를 확인하려면 다른 API 대신 이 엔드포인트를 사용합니다.""",
+    description="""이 엔드포인트를 사용해 SWC 판타지 풋볼의 리그, 팀, 선수 수를 확인합니다. 다른 조회 엔드포인트의 skip과 limit 매개변수과 함께 사용합니다. 개수를 확인하려면 다른 API 대신 이 엔드포인트를 사용합니다.""",
     response_description="SWC 판타지 풋볼의 리그, 팀, 선수 수입니다.",
     operation_id="v0_get_counts",
     tags=["analytics"],
