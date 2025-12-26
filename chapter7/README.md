@@ -58,4 +58,4 @@ with httpx.Client(base_url=self.swc_base_url) as client:
 
 ## 소프트웨어 개발 키트 (SDK)
 Python 사용자라면 swcpy SDK를 사용해 SportsWorldCentral API와 손쉽게 상호작용할 수 있습니다. 
-SDK에 대한 자세한 사용 방법과 설명은 [여기](sdk/README.md)를 참고하세요.
+SDK에 대한 자세한 사용 방법과 설명은 [SDK 문서](sdk/README.md)를 참고하세요.
